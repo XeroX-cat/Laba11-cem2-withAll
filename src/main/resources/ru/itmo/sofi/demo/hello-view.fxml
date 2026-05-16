@@ -28,16 +28,20 @@
                         <TableColumn fx:id="instrumentTUpdated" prefWidth="130.0" text="Обновляли" />
                     </columns>
                   </TableView>
-                  <Button fx:id="refreshInstrumentButton" mnemonicParsing="false" onAction="#onRefreshInstrument" text="Обновить" />
-                  <Button mnemonicParsing="false" onAction="#onSaveAll" text="Сохранить" />
-                  <Button mnemonicParsing="false" onAction="#onLoadAll" text="Загрузить" />
+                   <HBox spacing="8" style="-fx-padding: 10;">
+                       <children>
+                           <Button fx:id="refreshInstrumentButton" mnemonicParsing="false" onAction="#onRefreshInstrument" text="Обновить" />
+                           <Button mnemonicParsing="false" onAction="#onSaveAll" text="Сохранить" />
+                           <Button mnemonicParsing="false" onAction="#onLoadAll" text="Загрузить" />
+                       </children>
+                   </HBox>
                </children>
             </VBox>
          </content>
       </Tab>
     <Tab text="Бронирование">
          <content>
-            <VBox prefHeight="371.0" prefWidth="1097.0">
+            <VBox>
                <children>
                    <HBox spacing="10">
                        <children>
@@ -57,18 +61,22 @@
                         <TableColumn fx:id="bookingTUpdated" prefWidth="130.0" text="Обновляли" />
                     </columns>
                   </TableView>
-                  <Button fx:id="createBookingButton" mnemonicParsing="false" onAction="#onCreateBooking" text="Создать" />
-                  <Button fx:id="refreshBookingButton" mnemonicParsing="false" onAction="#onRefreshBooking" text="Обновить" />
-                  <Button fx:id="deleteBookingButton" mnemonicParsing="false" onAction="#onDeleteBooking" text="Удалить" />
-                  <Button mnemonicParsing="false" onAction="#onSaveAll" text="Сохранить" />
-                  <Button mnemonicParsing="false" onAction="#onLoadAll" text="Загрузить" />
+                   <HBox spacing="8" style="-fx-padding: 10;">
+                       <children>
+                           <Button fx:id="createBookingButton" mnemonicParsing="false" onAction="#onCreateBooking" text="Создать" />
+                           <Button fx:id="refreshBookingButton" mnemonicParsing="false" onAction="#onRefreshBooking" text="Обновить" />
+                           <Button fx:id="deleteBookingButton" mnemonicParsing="false" onAction="#onDeleteBooking" text="Удалить" />
+                           <Button mnemonicParsing="false" onAction="#onSaveAll" text="Сохранить" />
+                           <Button mnemonicParsing="false" onAction="#onLoadAll" text="Загрузить" />
+                       </children>
+                   </HBox>
                </children>
             </VBox>
          </content>
       </Tab>
       <Tab text="Выдача">
          <content>
-            <VBox>
+            <VBox spacing="8" style="-fx-padding: 10;">
                <children>
                    <HBox spacing="10">
                        <children>
@@ -89,12 +97,16 @@
                         <TableColumn fx:id="checkoutTCreated" prefWidth="130.0" text="Создали" />
                     </columns>
                   </TableView>
-                  <Button fx:id="createCheckoutButton" mnemonicParsing="false" onAction="#onCreateCheckout" text="Создать" />
-                  <Button fx:id="refreshCheckoutButton" mnemonicParsing="false" onAction="#onRefreshCheckout" text="Обновить" />
-                  <Button fx:id="returnCheckoutButton" mnemonicParsing="false" onAction="#onReturnCheckout" text="Возврат" />
-                  <Button fx:id="deleteCheckoutButton" mnemonicParsing="false" onAction="#onDeleteCheckout" text="Удалить" />
-                  <Button fx:id="saveAllutton" mnemonicParsing="false" onAction="#onSaveAll" text="Сохранить" />
-                  <Button mnemonicParsing="false" onAction="#onLoadAll" text="Загрузить" />
+                   <HBox spacing="8" style="-fx-padding: 10;">
+                       <children>
+                           <Button fx:id="createCheckoutButton" mnemonicParsing="false" onAction="#onCreateCheckout" text="Создать" />
+                           <Button fx:id="refreshCheckoutButton" mnemonicParsing="false" onAction="#onRefreshCheckout" text="Обновить" />
+                           <Button fx:id="returnCheckoutButton" mnemonicParsing="false" onAction="#onReturnCheckout" text="Возврат" />
+                           <Button fx:id="deleteCheckoutButton" mnemonicParsing="false" onAction="#onDeleteCheckout" text="Удалить" />
+                           <Button fx:id="saveAllutton" mnemonicParsing="false" onAction="#onSaveAll" text="Сохранить" />
+                           <Button mnemonicParsing="false" onAction="#onLoadAll" text="Загрузить" />
+                       </children>
+                   </HBox>
                </children>
             </VBox>
          </content>
