@@ -664,9 +664,7 @@ public class HelloController {
     private void onLoadAll() {
         DirectoryChooser chooser = new DirectoryChooser();
         chooser.setTitle("Выберите папку с данными");
-
         final File folder = chooser.showDialog(instrumentTable.getScene().getWindow());
-
         if (folder == null) {
             return;
         }
@@ -683,7 +681,6 @@ public class HelloController {
                 instrumentTable.setItems(FXCollections.observableArrayList(instrumentService.getAll()));
                 bookingTable.setItems(FXCollections.observableArrayList(bookingService.getAll()));
                 checkoutTable.setItems(FXCollections.observableArrayList(checkoutService.getAll()));
-
                 showInfo("Данные загружены.");
             }
         });
