@@ -35,7 +35,7 @@ public class BookCreate extends AbstractCommand {
 
             System.out.print("Конец (YYYY-MM-DD HH:MM): ");
             String end = scanner.nextLine().trim();
-            bookingService.bookCreate(instrumentId, start, end);
+            bookingService.bookCreate(instrumentId, start, end, "SYSTEM");
         } catch (NumberFormatException e) {
             throw new UserInputException("id должен быть числом.");
         }

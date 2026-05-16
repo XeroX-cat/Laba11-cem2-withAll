@@ -52,14 +52,14 @@ public class CheckoutService {
     }
 
     public Set<Checkout> getAll() {
-        return new HashSet<>(checkoutCollection); // копия
+        return new HashSet<>(checkoutCollection);
     }
 
-    public Checkout update(long id, long instrumentId, String username, String comment, Instant takenAt, Instant returnedAt, ReturnCondition returnCondition, String ownerUsername) {
+    public Checkout update(long id, long instrumentId, String username, String comment, Instant takenAt, ReturnCondition returnCondition, String ownerUsername, Instant createdAt) {
         Checkout old = getById(id);
         checkoutCollection.remove(old);
         Instant now = Instant.now();
-        Checkout updated = new Checkout(old.getId(), instrumentId, username, comment, takenAt, returnedAt, returnCondition, ownerUsername, now);
+        Checkout updated = new Checkout(old.getId(), instrumentId, username, comment, takenAt, now, returnCondition, ownerUsername, createdAt);
         checkoutCollection.add(updated);
         byId.put(id, updated);
         return updated;
@@ -70,7 +70,11 @@ public class CheckoutService {
         if (checkout == null) {
             throw new UserInputException("Инструмента с id " + id + " не существует.");
         }
+        if (checkout.getReturnedAt() == null) {
+            throw new UserInputException("Нельзя удалить выдачу, пока прибор не возвращён.");
+        }
         checkoutCollection.remove(checkout);
+        byId.remove(id);
     }
 
     public boolean existsActiveCheckout(long instrumentId) {
@@ -82,7 +86,7 @@ public class CheckoutService {
         return false;
     }
 
-    public void checkoutTake(long instrumentId, String username, String comment) throws UserInputException {
+    public void checkoutTake(long instrumentId, String username, String comment, String ownerUsername) throws UserInputException {
         Instrument instrument;
         instrument = instrumentService.getById(instrumentId);
         if (instrument.getStatus() == InstrumentStatus.OUT_OF_SERVICE) {
@@ -95,7 +99,7 @@ public class CheckoutService {
         String com = comment.trim();
         Long id = getCheckoutNextId();
         Instant now = Instant.now();
-        Checkout checkout = new Checkout(id, instrumentId, user, com, now, null, null, username, now);
+        Checkout checkout = new Checkout(id, instrumentId, user, com, now, null, null, ownerUsername, now);
         checkoutCollection.add(checkout);
         byId.put(id, checkout);
         System.out.println("OK checkout_id=" + id);
@@ -108,8 +112,7 @@ public class CheckoutService {
             return;
         }
         if (checkout.getReturnCondition() != null) {
-            System.out.println("Уже возвращён");
-            return;
+            throw new UserInputException("Эта выдача уже возвращена.");
         }
         condStr = condStr.trim().toUpperCase();
         ReturnCondition condition;
@@ -118,10 +121,7 @@ public class CheckoutService {
         } catch (IllegalArgumentException e) {
             throw new UserInputException ("неверный статус");
         }
-        checkoutCollection.remove(checkout);
-        Checkout updated = new Checkout(checkout.getId(), checkout.getInstrumentId(), checkout.getUsername(), checkout.getComment(), checkout.getTakenAt(), checkout.getReturnedAt(), condition, checkout.getOwnerUsername(), checkout.getCreatedAt());
-        checkoutCollection.add(updated);
-        byId.put(updated.getId(), updated);
+        update(checkout.getId(), checkout.getInstrumentId(), checkout.getUsername(), checkout.getComment(), checkout.getTakenAt(), condition, checkout.getOwnerUsername(), checkout.getCreatedAt());
         System.out.println("OK returned");
     }
 

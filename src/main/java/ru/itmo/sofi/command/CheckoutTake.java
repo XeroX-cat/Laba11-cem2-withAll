@@ -33,7 +33,7 @@ public class CheckoutTake extends AbstractCommand {
             String username = scanner.nextLine();
             System.out.print("Комментарий (можно пустой): ");
             String comment = scanner.nextLine();
-            checkoutService.checkoutTake(instrumentId, username, comment);
+            checkoutService.checkoutTake(instrumentId, username, comment, "SYSTEM");
         } catch (NumberFormatException e) {
             throw new UserInputException("id должен быть числом.");
         }

@@ -11,6 +11,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.time.ZoneId;
 
 public class BookingService {
     private final Set<Booking> bookingCollection = new HashSet<>();
@@ -65,10 +66,15 @@ public class BookingService {
         if (booking == null) {
             throw new UserInputException("Инструмента с id " + id + " не существует.");
         }
+        Instant now = Instant.now();
+        if (!booking.getStartAt().isAfter(now)) {
+            throw new UserInputException("Нельзя удалить бронь, которая уже началась или завершилась.");
+        }
         bookingCollection.remove(booking);
+        byId.remove(id);
     }
 
-    public void bookCreate(long instrumentId, String startStr, String endStr) throws UserInputException {
+    public void bookCreate(long instrumentId, String startStr, String endStr, String ownerUsername) throws UserInputException {
         instrumentService.getById(instrumentId);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         Instant startAt;
@@ -76,16 +82,25 @@ public class BookingService {
         try {
             LocalDateTime startLocal = LocalDateTime.parse(startStr, formatter);
             LocalDateTime endLocal = LocalDateTime.parse(endStr, formatter);
-
-            startAt = startLocal.toInstant(ZoneOffset.UTC);
-            endAt = endLocal.toInstant(ZoneOffset.UTC);
+            ZoneId zone = ZoneId.systemDefault();
+            startAt = startLocal.atZone(zone).toInstant();
+            endAt = endLocal.atZone(zone).toInstant();
         } catch (DateTimeParseException e) {
             throw new UserInputException("Формат даты неверный (YYYY-MM-DD HH:MM)");
         }
         if (!endAt.isAfter(startAt)) {
             throw new UserInputException("Конец раньше начала");
         }
-        Booking b = add(instrumentId, startAt, endAt, BookingStatus.ACTIVE, "Van");
+        for (Booking old : bookingCollection) {
+            if (old.getInstrumentId() == instrumentId) {
+                boolean conflict = startAt.isBefore(old.getEndAt()) && endAt.isAfter(old.getStartAt());
+
+                if (conflict) {
+                    throw new UserInputException("На это время прибор уже забронирован.");
+                }
+            }
+        }
+        Booking b = add(instrumentId, startAt, endAt, BookingStatus.ACTIVE, ownerUsername);
         System.out.println("OK booking_id=" + b.getId());
     }
 

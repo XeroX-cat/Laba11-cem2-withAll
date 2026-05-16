@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<TabPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="909.0" tabClosingPolicy="UNAVAILABLE" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.itmo.sofi.demo.HelloController">
+  <tabs>
+    <Tab text="Приборы">
+         <content>
+            <VBox>
+               <children>
+                  <TableView fx:id="instrumentTable" prefHeight="200.0" prefWidth="200.0">
+                    <columns>
+                      <TableColumn fx:id="instrumentTId" prefWidth="100.0" text="ID" />
+                      <TableColumn fx:id="instrumentTName" prefWidth="100.0" text="Имя" />
+                        <TableColumn fx:id="instrumentTType" prefWidth="100.0" text="Тип" />
+                        <TableColumn fx:id="instrumentTInvNumber" prefWidth="100.0" text="ИН" />
+                        <TableColumn fx:id="instrumentTLocation" maxWidth="-1.0" minWidth="-1.0" prefWidth="-1.0" text="Лока" />
+                        <TableColumn fx:id="instrumentTStatus" prefWidth="100.0" text="Статус" />
+                        <TableColumn fx:id="instrumentTOwner" prefWidth="100.0" text="Чей" />
+                        <TableColumn fx:id="instrumentTCreated" prefWidth="130.0" text="Создали" />
+                        <TableColumn fx:id="instrumentTUpdated" prefWidth="130.0" text="Обновляли" />
+                    </columns>
+                  </TableView>
+                  <Button fx:id="refreshInstrumentButton" mnemonicParsing="false" onAction="#onRefreshInstrument" text="Обновить" />
+                  <Button mnemonicParsing="false" onAction="#onSaveAll" text="Сохранить" />
+                  <Button mnemonicParsing="false" onAction="#onLoadAll" text="Загрузить" />
+               </children>
+            </VBox>
+         </content>
+      </Tab>
+    <Tab text="Бронирование">
+         <content>
+            <VBox prefHeight="371.0" prefWidth="1097.0">
+               <children>
+                   <HBox spacing="10">
+                       <children>
+                           <ComboBox fx:id="bookingInstrumentFilterBox" prefWidth="250.0" />
+                           <Button onAction="#onClearBookingFilter" text="Очистить" />
+                       </children>
+                   </HBox>
+                  <TableView fx:id="bookingTable" prefHeight="200.0" prefWidth="200.0">
+                    <columns>
+                      <TableColumn fx:id="bookingTId" prefWidth="100.0" text="ID" />
+                      <TableColumn fx:id="bookingTInstId" prefWidth="100.0" text="IDпр" />
+                        <TableColumn fx:id="bookingTStart" prefWidth="130.0" text="Начало" />
+                        <TableColumn fx:id="bookingTEnd" prefWidth="130.0" text="Конец" />
+                        <TableColumn fx:id="bookingTStatus" prefWidth="100.0" text="Статус" />
+                        <TableColumn fx:id="bookingTOwner" prefWidth="100.0" text="Чьё" />
+                        <TableColumn fx:id="bookingTCreated" prefWidth="130.0" text="Создали" />
+                        <TableColumn fx:id="bookingTUpdated" prefWidth="130.0" text="Обновляли" />
+                    </columns>
+                  </TableView>
+                  <Button fx:id="createBookingButton" mnemonicParsing="false" onAction="#onCreateBooking" text="Создать" />
+                  <Button fx:id="refreshBookingButton" mnemonicParsing="false" onAction="#onRefreshBooking" text="Обновить" />
+                  <Button fx:id="deleteBookingButton" mnemonicParsing="false" onAction="#onDeleteBooking" text="Удалить" />
+                  <Button mnemonicParsing="false" onAction="#onSaveAll" text="Сохранить" />
+                  <Button mnemonicParsing="false" onAction="#onLoadAll" text="Загрузить" />
+               </children>
+            </VBox>
+         </content>
+      </Tab>
+      <Tab text="Выдача">
+         <content>
+            <VBox>
+               <children>
+                   <HBox spacing="10">
+                       <children>
+                           <ComboBox fx:id="checkoutInstrumentFilterBox" prefWidth="250.0" />
+                           <Button onAction="#onClearCheckoutFilter" text="Очистить" />
+                       </children>
+                   </HBox>
+                  <TableView fx:id="checkoutTable" prefHeight="200.0" prefWidth="200.0">
+                    <columns>
+                      <TableColumn fx:id="checkoutTId" prefWidth="100.0" text="ID" />
+                      <TableColumn fx:id="checkoutTInstId" prefWidth="100.0" text="IDпр" />
+                        <TableColumn fx:id="checkoutTUser" prefWidth="100.0" text="Выдали" />
+                        <TableColumn fx:id="checkoutTComm" prefWidth="100.0" text="Комм" />
+                        <TableColumn fx:id="checkoutTTaken" prefWidth="130.0" text="Взяли" />
+                        <TableColumn fx:id="checkoutTReturned" prefWidth="130.0" text="Вернули" />
+                        <TableColumn fx:id="checkoutTCondition" prefWidth="100.0" text="Состояние" />
+                        <TableColumn fx:id="checkoutTOwner" prefWidth="130.0" text="Оформил" />
+                        <TableColumn fx:id="checkoutTCreated" prefWidth="130.0" text="Создали" />
+                    </columns>
+                  </TableView>
+                  <Button fx:id="createCheckoutButton" mnemonicParsing="false" onAction="#onCreateCheckout" text="Создать" />
+                  <Button fx:id="refreshCheckoutButton" mnemonicParsing="false" onAction="#onRefreshCheckout" text="Обновить" />
+                  <Button fx:id="returnCheckoutButton" mnemonicParsing="false" onAction="#onReturnCheckout" text="Возврат" />
+                  <Button fx:id="deleteCheckoutButton" mnemonicParsing="false" onAction="#onDeleteCheckout" text="Удалить" />
+                  <Button fx:id="saveAllutton" mnemonicParsing="false" onAction="#onSaveAll" text="Сохранить" />
+                  <Button mnemonicParsing="false" onAction="#onLoadAll" text="Загрузить" />
+               </children>
+            </VBox>
+         </content>
+      </Tab>
+  </tabs>
+</TabPane>

@@ -23,8 +23,7 @@ public class StorageValidator {
                 }
             }
             if (!instrumentExists) {
-                throw new StorageException(
-                        "Ошибка загрузки: бронь id=" + booking.getId() + " ссылается на несуществующий instrumentId=" + booking.getInstrumentId());
+                throw new StorageException("Ошибка загрузки: бронь id=" + booking.getId() + " ссылается на несуществующий instrumentId=" + booking.getInstrumentId());
             }
             if (booking.getStartAt() == null || booking.getEndAt() == null) {
                 throw new StorageException("Ошибка загрузки: у брони id=" + booking.getId() + " не указаны даты");

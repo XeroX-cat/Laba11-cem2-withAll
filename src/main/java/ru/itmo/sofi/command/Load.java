@@ -34,6 +34,7 @@ public class Load extends AbstractCommand {
     @Override
     public void execute(String[] args) throws StorageException {
         try {
+            Thread.sleep(5000);
             if (args.length < 2) {
                 System.out.println("Укажите путь. Пример: load data");
                 return;
@@ -51,6 +52,8 @@ public class Load extends AbstractCommand {
             bookingService.replaceAll(bookings);
             checkoutService.replaceAll(checkouts);
             System.out.println("Данные загружены");
+        } catch (InterruptedException e) {
+            throw new StorageException("Операция прервана");
         } catch (Exception e) {
             throw new StorageException ("Ошибка загрузки: " + e.getMessage());
         }

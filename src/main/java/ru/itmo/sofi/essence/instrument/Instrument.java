@@ -43,7 +43,7 @@ public final class Instrument {
         this.status = status;
         this.ownerUsername = ownerUsername;
         this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
+        this.updatedAt = Instant.now();
     }
 
     public long getId() {
