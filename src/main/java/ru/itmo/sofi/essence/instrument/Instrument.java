@@ -72,7 +72,7 @@ public final class Instrument {
     }
 
     public void setInventoryNumber(String inventoryNumber) throws UserInputException {
-        if (inventoryNumber == null || inventoryNumber.length() < 32) {
+        if (inventoryNumber != null && !inventoryNumber.isEmpty() && inventoryNumber.length() < 32) {
             this.inventoryNumber = inventoryNumber;
         } else {
             throw new UserInputException(inventoryNumber + "не удовлетворяет условию инвентарного номера.");

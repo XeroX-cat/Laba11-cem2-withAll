@@ -1,14 +1,18 @@
 package ru.itmo.sofi.demo;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.stage.DirectoryChooser;
+import javafx.stage.Stage;
 import ru.itmo.sofi.base.CollectionStorage;
 import ru.itmo.sofi.base.JsonCollectionStorage;
 import ru.itmo.sofi.command.Load;
@@ -20,7 +24,9 @@ import ru.itmo.sofi.essence.checkout.ReturnCondition;
 import ru.itmo.sofi.essence.instrument.Instrument;
 import ru.itmo.sofi.essence.instrument.InstrumentStatus;
 import ru.itmo.sofi.essence.instrument.InstrumentType;
-import ru.itmo.sofi.exception.StorageException;
+import ru.itmo.sofi.essence.user.User;
+import ru.itmo.sofi.exception.StorageLoadException;
+import ru.itmo.sofi.login.CurrentUser;
 import ru.itmo.sofi.service.BookingService;
 import ru.itmo.sofi.service.CheckoutService;
 import ru.itmo.sofi.service.InstrumentService;
@@ -30,10 +36,12 @@ import ru.itmo.sofi.exception.UserInputException;
 import javafx.util.Callback;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.event.EventHandler;
-import javafx.concurrent.WorkerStateEvent;
+import ru.itmo.sofi.service.UserService;
+import ru.itmo.sofi.exception.StorageSaveException;
 
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -41,8 +49,9 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
-public class HelloController {
-    private String ownerUsername = "SYSTEM";
+public class MainController {
+    private boolean criticalLoadError = false;
+    private String ownerUsername;
     private boolean instrumentsInitialized = false;
     private final InstrumentService instrumentService = new InstrumentService();
     private final BookingService bookingService = new BookingService(instrumentService);
@@ -55,6 +64,7 @@ public class HelloController {
     });
     private final Save saveCommand = new Save(instrumentService, bookingService, checkoutService, instrumentStorage, bookingStorage, checkoutStorage);
     private final Load loadCommand = new Load(instrumentService, bookingService, checkoutService, instrumentStorage, bookingStorage, checkoutStorage);
+    private final UserService userService = new UserService();
     @FXML
     private Label welcomeText;
     @FXML
@@ -119,6 +129,18 @@ public class HelloController {
     private TableColumn<Checkout, Instant> checkoutTCreated;
     @FXML
     private ComboBox<Instrument> checkoutInstrumentFilterBox;
+    @FXML
+    private Button deleteCheckoutButton;
+    @FXML
+    private Button deleteInstrumentButton;
+    @FXML
+    private Button updateInstrumentButton;
+    @FXML
+    private Button showUsersButton1;
+    @FXML
+    private Button showUsersButton2;
+    @FXML
+    private Button showUsersButton3;
 
     public void setOwnerUsername(String ownerUsername) {
         this.ownerUsername = ownerUsername;
@@ -132,11 +154,11 @@ public class HelloController {
     @FXML
     private void onRefreshInstrument() {
         System.out.println("Refresh приборов нажат");
-        if (!instrumentsInitialized) {
-            instrumentService.add("pH-метр", InstrumentType.PH_METER, "123", "Лаборатория", InstrumentStatus.OUT_OF_SERVICE, "SYSTEM");
-            instrumentService.add("сушка", InstrumentType.DRYING_OVEN, "123", "Лаборатория", InstrumentStatus.ACTIVE, "SYSTEM");
-            instrumentsInitialized = true;
-        }
+//        if (!instrumentsInitialized) {
+//            instrumentService.add("pH-метр", InstrumentType.PH_METER, "123", "Лаборатория", InstrumentStatus.OUT_OF_SERVICE, "SYSTEM");
+//            instrumentService.add("сушка", InstrumentType.DRYING_OVEN, "123", "Лаборатория", InstrumentStatus.ACTIVE, "SYSTEM");
+//            instrumentsInitialized = true;
+//        }
         instrumentTable.setItems(FXCollections.observableArrayList(instrumentService.getAll()));
         bookingInstrumentFilterBox.getItems().setAll(instrumentService.getAll());
         checkoutInstrumentFilterBox.getItems().setAll(instrumentService.getAll());
@@ -161,6 +183,116 @@ public class HelloController {
     }
 
     @FXML
+    private void onCreateInstrument() {
+        if (!CurrentUser.isAdmin()) {
+            showError("Создание доступно только администратору.");
+            return;
+        }
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Создать прибор");
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        TextField nameField = new TextField();
+        TextField inventoryField = new TextField();
+        TextField locationField = new TextField();
+        ComboBox<InstrumentType> typeBox = new ComboBox<>();
+        typeBox.getItems().addAll(InstrumentType.values());
+        ComboBox<InstrumentStatus> statusBox = new ComboBox<>();
+        statusBox.getItems().addAll(InstrumentStatus.values());
+        statusBox.setValue(InstrumentStatus.ACTIVE);
+        grid.add(new Label("Название:"), 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(new Label("Тип:"), 0, 1);
+        grid.add(typeBox, 1, 1);
+        grid.add(new Label("Инв. номер:"), 0, 2);
+        grid.add(inventoryField, 1, 2);
+        grid.add(new Label("Локация:"), 0, 3);
+        grid.add(locationField, 1, 3);
+        grid.add(new Label("Статус:"), 0, 4);
+        grid.add(statusBox, 1, 4);
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                try {
+                    instrumentService.add(nameField.getText().trim(), typeBox.getValue(), inventoryField.getText().trim(), locationField.getText().trim(), statusBox.getValue(), CurrentUser.getCurrentUser().getLogin());
+                    onRefreshInstrument();
+                } catch (UserInputException e) {
+                    showError(e.getMessage());
+                    event.consume();
+                }
+            }
+        });
+
+        dialog.showAndWait();;
+    }
+
+    @FXML
+    private void onDeleteInstrument() {
+        Instrument selected = instrumentTable.getSelectionModel().getSelectedItem();
+        if (!CurrentUser.isAdmin()) {
+            showError("Удаление доступно только администратору.");
+            return;
+        }
+        if (selected == null) {
+            showError("Выберите прибор в таблице.");
+            return;
+        }
+        try {
+            instrumentService.remove(selected.getId());
+            onRefreshInstrument();
+        } catch (UserInputException e) {
+            showError(e.getMessage());
+        }
+    }
+
+    @FXML
+    private void onUpdateInstrument() {
+        Instrument selected = instrumentTable.getSelectionModel().getSelectedItem();
+        if (!CurrentUser.isAdmin()) {
+            showError("Удаление доступно только администратору.");
+            return;
+        }
+        if (selected == null) {
+            showError("Выберите прибор");
+            return;
+        }
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Изменить прибор");
+        TextField nameField = new TextField(selected.getName());
+        TextField invField = new TextField(selected.getInventoryNumber());
+        TextField locField = new TextField(selected.getLocation());
+        ComboBox<InstrumentStatus> statusBox = new ComboBox<>();
+        statusBox.getItems().addAll(InstrumentStatus.values());
+        statusBox.setValue(selected.getStatus());
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.add(new Label("Название:"), 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(new Label("Инв. номер:"), 0, 2);
+        grid.add(invField, 1, 2);
+        grid.add(new Label("Место:"), 0, 3);
+        grid.add(locField, 1, 3);
+        grid.add(new Label("Статус:"), 0, 4);
+        grid.add(statusBox, 1, 4);
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        Optional<ButtonType> result = dialog.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                instrumentService.update(selected.getId(), nameField.getText().trim(), invField.getText().trim(), locField.getText().trim(), statusBox.getValue(), CurrentUser.getCurrentUser().getLogin());
+                onRefreshInstrument();
+            } catch (Exception e) {
+                showError(e.getMessage());
+            }
+        }
+    }
+
+    @FXML
     private void onRefreshCheckout() {
 //        checkoutTable.setItems(FXCollections.observableArrayList(checkoutService.getAll()));
         Instrument selected = checkoutInstrumentFilterBox.getValue();
@@ -179,7 +311,7 @@ public class HelloController {
     }
 
     @FXML
-    private void onCreateBooking() {
+    private void onCreateBooking() throws UserInputException {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Создать бронирование");
         ComboBox<Instrument> instrumentBox = new ComboBox<>();
@@ -235,7 +367,7 @@ public class HelloController {
                     if (selected == null) {
                         throw new UserInputException("Выберите прибор.");
                     }
-                    bookingService.bookCreate(selected.getId(), startField.getText(), endField.getText(), ownerUsername);
+                    bookingService.bookCreate(selected.getId(), startField.getText(), endField.getText(), CurrentUser.getCurrentUser().getLogin());
                 } catch (UserInputException e) {
                     showError(e.getMessage());
                     event.consume();
@@ -243,6 +375,7 @@ public class HelloController {
             }
         });
         dialog.showAndWait();
+        onRefreshBooking();
 //        Optional<ButtonType> result = dialog.showAndWait();
 //        if (result.isPresent()) {
 //            if (result.get() == ButtonType.OK) {
@@ -260,14 +393,18 @@ public class HelloController {
     }
 
     @FXML
-    private void onDeleteBooking() {
+    private void onCancelBooking() {
         Booking selected = bookingTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
             showError("Выберите бронь в таблице.");
             return;
         }
+        if (!CurrentUser.isAdmin() && !selected.getOwnerUsername().equals(CurrentUser.getCurrentUser().getLogin())) {
+            showError("Вы можете отменить только своё бронирование.");
+            return;
+        }
         try {
-            bookingService.remove(selected.getId());
+            bookingService.bookCancel(selected.getId());
             onRefreshBooking();
         } catch (UserInputException e) {
             showError(e.getMessage());
@@ -275,7 +412,7 @@ public class HelloController {
     }
 
     @FXML
-    private void onCreateCheckout() {
+    private void onCreateCheckout() throws UserInputException {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Выдать прибор");
         ComboBox<Instrument> instrumentBox = new ComboBox<>();
@@ -331,7 +468,7 @@ public class HelloController {
                     if (selected == null) {
                         throw new UserInputException("Выберите прибор.");
                     }
-                    checkoutService.checkoutTake(selected.getId(), userField.getText(), commentField.getText(), ownerUsername);
+                    checkoutService.checkoutTake(selected.getId(), userField.getText(), commentField.getText(), CurrentUser.getCurrentUser().getLogin());
                 } catch (UserInputException e) {
                     showError(e.getMessage());
                     event.consume();
@@ -339,6 +476,7 @@ public class HelloController {
             }
         });
         dialog.showAndWait();
+        onRefreshCheckout();
 //        Optional<ButtonType> result = dialog.showAndWait();
 //        if (result.isPresent()) {
 //            if (result.get() == ButtonType.OK) {
@@ -365,15 +503,19 @@ public class HelloController {
     @FXML
     private void onClearCheckoutFilter() {
         checkoutInstrumentFilterBox.setValue(null);
-        onRefreshBooking();
+        onRefreshCheckout();
     }
 
     @FXML
-    private void onReturnCheckout() {
+    private void onReturnCheckout() throws UserInputException {
         System.out.println("Кнопка возврата нажата");
         Checkout selected = checkoutTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
             showError("Выберите выдачу в таблице.");
+            return;
+        }
+        if (!CurrentUser.isAdmin() && !selected.getOwnerUsername().equals(CurrentUser.getCurrentUser().getLogin())) {
+            showError("Вы можете вернуть только свою выдачу.");
             return;
         }
         Dialog<ButtonType> dialog = new Dialog<ButtonType>();
@@ -402,11 +544,16 @@ public class HelloController {
                 }
             }
         }
+        onRefreshCheckout();
     }
 
     @FXML
     private void onDeleteCheckout() {
         Checkout selected = checkoutTable.getSelectionModel().getSelectedItem();
+        if (!CurrentUser.isAdmin()) {
+            showError("Удаление доступно только администратору.");
+            return;
+        }
         if (selected == null) {
             showError("Выберите выдачу в таблице.");
             return;
@@ -421,6 +568,26 @@ public class HelloController {
 
     @FXML
     public void initialize() {
+        if (userService.getAllUsers().isEmpty()) {
+            userService.registration("administrator", "administrator", true);
+            userService.registration("simpleuser", "simpleuser", false);
+        }
+        try {
+//            userService.loadUsers(HelloApplication.DATA_FOLDER);
+            Path instrumentsPath = HelloApplication.DATA_FOLDER.resolve("instruments.json");
+            Path bookingsPath = HelloApplication.DATA_FOLDER.resolve("bookings.json");
+            Path checkoutsPath = HelloApplication.DATA_FOLDER.resolve("checkouts.json");
+            if (Files.exists(instrumentsPath) && Files.exists(bookingsPath) && Files.exists(checkoutsPath)) {
+                loadCommand.execute(new String[]{"load", HelloApplication.DATA_FOLDER.toString()});
+            }
+        } catch (StorageLoadException e) {
+            criticalLoadError = true;
+            showError(e.getMessage());
+        }
+        updateAccessRights();
+        onRefreshInstrument();
+        onRefreshBooking();
+        onRefreshCheckout();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
         instrumentTId.setCellValueFactory(new PropertyValueFactory<>("id"));
         instrumentTName.setCellValueFactory(new PropertyValueFactory<>("name"));
@@ -618,42 +785,65 @@ public class HelloController {
 //        }
 //    }
 
+//    @FXML
+//    private void onSaveAll() {
+//        DirectoryChooser chooser = new DirectoryChooser();
+//        chooser.setTitle("Выберите место для сохранения");
+//        File parentFolder = chooser.showDialog(instrumentTable.getScene().getWindow());
+//        if (parentFolder == null) {
+//            return;
+//        }
+//        TextInputDialog dialog = new TextInputDialog("data");
+//        dialog.setTitle("Имя папки");
+//        dialog.setHeaderText("Введите имя папки для сохранения");
+//        dialog.setContentText("Имя папки:");
+//        Optional<String> result = dialog.showAndWait();
+//        if (!result.isPresent() || result.get().trim().isEmpty()) {
+//            return;
+//        }
+//        final File saveFolder = new File(parentFolder, result.get().trim());
+//        Task<Void> task = new Task<Void>() {
+//            @Override
+//            protected Void call() throws Exception {
+//                saveCommand.execute(new String[]{"save", saveFolder.getAbsolutePath()});
+//                userService.saveUsers(saveFolder.toPath());
+//                return null;
+//            }
+//        };
+//        task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+//            @Override
+//            public void handle(WorkerStateEvent event) {
+//                showInfo("Данные сохранены в папку:\n" + saveFolder.getAbsolutePath());
+//            }
+//        });
+//        task.setOnFailed(new EventHandler<WorkerStateEvent>() {
+//            @Override
+//            public void handle(WorkerStateEvent event) {
+//                Throwable ex = task.getException();
+//                showError(ex.getMessage());
+//            }
+//        });
+//        Thread thread = new Thread(task);
+//        thread.setDaemon(true);
+//        thread.start();
+//    }
+
     @FXML
     private void onSaveAll() {
-        DirectoryChooser chooser = new DirectoryChooser();
-        chooser.setTitle("Выберите место для сохранения");
-        File parentFolder = chooser.showDialog(instrumentTable.getScene().getWindow());
-        if (parentFolder == null) {
-            return;
-        }
-        TextInputDialog dialog = new TextInputDialog("data");
-        dialog.setTitle("Имя папки");
-        dialog.setHeaderText("Введите имя папки для сохранения");
-        dialog.setContentText("Имя папки:");
-        Optional<String> result = dialog.showAndWait();
-        if (!result.isPresent() || result.get().trim().isEmpty()) {
-            return;
-        }
-        final File saveFolder = new File(parentFolder, result.get().trim());
-        Task<Void> task = new Task<Void>() {
+        Task<Void> task = new Task<>() {
             @Override
             protected Void call() throws Exception {
-                saveCommand.execute(new String[]{"save", saveFolder.getAbsolutePath()});
+//                saveCommand.execute(new String[]{"save", HelloApplication.DATA_FOLDER.toString()});
+//                userService.saveUsers(HelloApplication.DATA_FOLDER);
                 return null;
             }
         };
-        task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent event) {
-                showInfo("Данные сохранены в папку:\n" + saveFolder.getAbsolutePath());
-            }
+        task.setOnSucceeded(event -> {
+            showInfo("Данные сохранены в папку:\n" + HelloApplication.DATA_FOLDER.toAbsolutePath());
         });
-        task.setOnFailed(new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent event) {
-                Throwable ex = task.getException();
-                showError(ex.getMessage());
-            }
+        task.setOnFailed(event -> {
+            Throwable ex = task.getException();
+            showError(ex.getMessage());
         });
         Thread thread = new Thread(task);
         thread.setDaemon(true);
@@ -662,41 +852,56 @@ public class HelloController {
 
     @FXML
     private void onLoadAll() {
-        DirectoryChooser chooser = new DirectoryChooser();
-        chooser.setTitle("Выберите папку с данными");
-        final File folder = chooser.showDialog(instrumentTable.getScene().getWindow());
-        if (folder == null) {
-            return;
+        try {
+            loadCommand.execute(new String[]{"load", HelloApplication.DATA_FOLDER.toString()});
+//            userService.loadUsers(HelloApplication.DATA_FOLDER);
+            instrumentTable.setItems(FXCollections.observableArrayList(instrumentService.getAll()));
+            bookingTable.setItems(FXCollections.observableArrayList(bookingService.getAll()));
+            checkoutTable.setItems(FXCollections.observableArrayList(checkoutService.getAll()));
+            showInfo("Данные загружены из папки:\n" + HelloApplication.DATA_FOLDER.toAbsolutePath());
+        } catch (Exception e) {
+            showError(e.getMessage());
         }
-        Task<Void> task = new Task<Void>() {
-            @Override
-            protected Void call() throws Exception {
-                loadCommand.execute(new String[]{"load", folder.getAbsolutePath()});
-                return null;
-            }
-        };
-        task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent event) {
-                instrumentTable.setItems(FXCollections.observableArrayList(instrumentService.getAll()));
-                bookingTable.setItems(FXCollections.observableArrayList(bookingService.getAll()));
-                checkoutTable.setItems(FXCollections.observableArrayList(checkoutService.getAll()));
-                showInfo("Данные загружены.");
-            }
-        });
-        task.setOnFailed(new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent event) {
-                Throwable ex = task.getException();
-                showError(ex.getMessage());
-            }
-        });
-        Thread thread = new Thread(task);
-        thread.setDaemon(true);
-        thread.start();
     }
 
 //    @FXML
+//    private void onLoadAll() {
+//        DirectoryChooser chooser = new DirectoryChooser();
+//        chooser.setTitle("Выберите папку с данными");
+//        final File folder = chooser.showDialog(instrumentTable.getScene().getWindow());
+//        if (folder == null) {
+//            return;
+//        }
+//        Task<Void> task = new Task<Void>() {
+//            @Override
+//            protected Void call() throws Exception {
+//                loadCommand.execute(new String[]{"load", folder.getAbsolutePath()});
+//                userService.loadUsers(folder.toPath());
+//                return null;
+//            }
+//        };
+//        task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+//            @Override
+//            public void handle(WorkerStateEvent event) {
+//                instrumentTable.setItems(FXCollections.observableArrayList(instrumentService.getAll()));
+//                bookingTable.setItems(FXCollections.observableArrayList(bookingService.getAll()));
+//                checkoutTable.setItems(FXCollections.observableArrayList(checkoutService.getAll()));
+//                showInfo("Данные загружены.");
+//            }
+//        });
+//        task.setOnFailed(new EventHandler<WorkerStateEvent>() {
+//            @Override
+//            public void handle(WorkerStateEvent event) {
+//                Throwable ex = task.getException();
+//                showError(ex.getMessage());
+//            }
+//        });
+//        Thread thread = new Thread(task);
+//        thread.setDaemon(true);
+//        thread.start();
+//    }
+
+    //    @FXML
 //    private void onLoadAll() {
 //        DirectoryChooser chooser = new DirectoryChooser();
 //        chooser.setTitle("Выберите папку с данными");
@@ -714,4 +919,115 @@ public class HelloController {
 //            showError(e.getMessage());
 //        }
 //    }
+
+    private void onLogin() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Авторизация");
+        dialog.setHeaderText("Введите логин и пароль");
+        Label loginLabel = new Label("Логин:");
+        TextField loginField = new TextField();
+        Label passwordLabel = new Label("Пароль:");
+        PasswordField passwordField = new PasswordField();
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.add(loginLabel, 0, 0);
+        grid.add(loginField, 1, 0);
+        grid.add(passwordLabel, 0, 1);
+        grid.add(passwordField, 1, 1);
+        dialog.getDialogPane().setContent(grid);
+        ButtonType loginButton = new ButtonType("Войти", ButtonBar.ButtonData.OK_DONE);
+        ButtonType registerButton = new ButtonType("Регистрация", ButtonBar.ButtonData.OTHER);
+        ButtonType cancelButton = new ButtonType("Отмена", ButtonBar.ButtonData.CANCEL_CLOSE);
+        dialog.getDialogPane().getButtonTypes().addAll(registerButton, loginButton, cancelButton);
+        Optional<ButtonType> result = dialog.showAndWait();
+        if (result.isEmpty() || result.get() == cancelButton) {
+            Platform.exit();
+            return;
+        }
+        if (result.get() == registerButton) {
+            onRegister();
+            onLogin();
+            return;
+        }
+        String login = loginField.getText();
+        String password = passwordField.getText();
+        try {
+            User user = userService.login(login, password);
+            CurrentUser.login(user);
+            updateAccessRights();
+            showInfo("Вход выполнен: " + user.getLogin());
+        } catch (UserInputException e) {
+            showError(e.getMessage());
+            onLogin();
+        }
+    }
+
+    private void updateAccessRights() {
+        boolean admin = CurrentUser.isAdmin();
+        deleteCheckoutButton.setVisible(admin);
+        deleteCheckoutButton.setManaged(admin);
+        deleteInstrumentButton.setVisible(admin);
+        deleteInstrumentButton.setManaged(admin);
+        updateInstrumentButton.setVisible(admin);
+        updateInstrumentButton.setManaged(admin);
+        showUsersButton1.setVisible(admin);
+        showUsersButton1.setManaged(admin);
+        showUsersButton2.setVisible(admin);
+        showUsersButton2.setManaged(admin);
+        showUsersButton3.setVisible(admin);
+        showUsersButton3.setManaged(admin);
+    }
+
+    private boolean canEdit(String ownerUsername) {
+        return CurrentUser.isAdmin() || CurrentUser.getCurrentUser().getLogin().equals(ownerUsername);
+    }
+
+    private void onRegister() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Регистрация");
+        TextField loginField = new TextField();
+        loginField.setPromptText("Логин");
+        PasswordField passwordField = new PasswordField();
+        passwordField.setPromptText("Пароль");
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.add(new Label("Логин:"), 0, 0);
+        grid.add(loginField, 1, 0);
+        grid.add(new Label("Пароль:"), 0, 1);
+        grid.add(passwordField, 1, 1);
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        Optional<ButtonType> result = dialog.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                userService.registration(loginField.getText(), passwordField.getText(), false);
+                saveCommand.execute(new String[]{"save", "data"});
+                showInfo("Пользователь зарегистрирован.");
+            } catch (UserInputException e) {
+                showError(e.getMessage());
+            } catch (StorageSaveException e) {
+                showError("Пользователь создан, но не сохранён: " + e.getMessage());
+            }
+        }
+    }
+
+    public boolean hasCriticalLoadError() {
+        return criticalLoadError;
+    }
+
+    @FXML
+    private void onShowUsers() {
+        try {
+            FXMLLoader loader = new FXMLLoader(HelloApplication.class.getResource("users.fxml"));
+            Parent root = loader.load();
+            Stage stage = new Stage();
+            stage.setTitle("Пользователи");
+            stage.setScene(new Scene(root));
+            stage.show();
+        } catch (IOException e) {
+            showError("Не удалось открыть окно пользователей.");
+        }
+    }
 }

@@ -64,7 +64,7 @@ public final class Checkout {
     }
 
     public void setUsername(String username) throws UserInputException {
-        if (username != null && !username.isEmpty() && username.length() < 64) {
+        if (username != null && !username.trim().isEmpty() && username.trim().length() < 64) {
             this.username = username;
         } else {
             throw new UserInputException(username + " не удовлетворяет условию имени пользователя.");
@@ -76,7 +76,7 @@ public final class Checkout {
     }
 
     public void setComment(String comment) throws UserInputException {
-        if (comment == null || comment.length() < 128) {
+        if (comment == null || comment.trim().length() < 128) {
             this.comment = comment;
         } else {
             throw new UserInputException(comment + " не удовлетворяет условию коммита.");

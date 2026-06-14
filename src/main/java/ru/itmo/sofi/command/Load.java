@@ -5,11 +5,14 @@ import ru.itmo.sofi.base.StorageValidator;
 import ru.itmo.sofi.essence.booking.Booking;
 import ru.itmo.sofi.essence.checkout.Checkout;
 import ru.itmo.sofi.essence.instrument.Instrument;
-import ru.itmo.sofi.exception.StorageException;
+import ru.itmo.sofi.exception.StorageLoadException;
+import ru.itmo.sofi.exception.StorageSaveException;
+import ru.itmo.sofi.exception.UserInputException;
 import ru.itmo.sofi.service.BookingService;
 import ru.itmo.sofi.service.CheckoutService;
 import ru.itmo.sofi.service.InstrumentService;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
 
@@ -32,9 +35,8 @@ public class Load extends AbstractCommand {
     }
 
     @Override
-    public void execute(String[] args) throws StorageException {
+    public void execute(String[] args) throws UserInputException, StorageLoadException, StorageSaveException {
         try {
-            Thread.sleep(5000);
             if (args.length < 2) {
                 System.out.println("Укажите путь. Пример: load data");
                 return;
@@ -44,6 +46,15 @@ public class Load extends AbstractCommand {
             Path instrumentPath = basePath.resolve("instruments.json");
             Path bookingPath = basePath.resolve("bookings.json");
             Path checkoutPath = basePath.resolve("checkouts.json");
+            if (!Files.exists(instrumentPath)) {
+                throw new StorageLoadException("Файл не существует: " + instrumentPath);
+            }
+            if (!Files.exists(bookingPath)) {
+                throw new StorageLoadException("Файл не существует: " + bookingPath);
+            }
+            if (!Files.exists(checkoutPath)) {
+                throw new StorageLoadException("Файл не существует: " + checkoutPath);
+            }
             Set<Instrument> instruments = instrumentStorage.load(instrumentPath);
             Set<Booking> bookings = bookingStorage.load(bookingPath);
             Set<Checkout> checkouts = checkoutStorage.load(checkoutPath);
@@ -52,10 +63,10 @@ public class Load extends AbstractCommand {
             bookingService.replaceAll(bookings);
             checkoutService.replaceAll(checkouts);
             System.out.println("Данные загружены");
-        } catch (InterruptedException e) {
-            throw new StorageException("Операция прервана");
+        } catch (StorageLoadException e) {
+            throw e;
         } catch (Exception e) {
-            throw new StorageException ("Ошибка загрузки: " + e.getMessage());
+            throw new StorageLoadException("Проверьте наличие и корректность файлов.");
         }
     }
 

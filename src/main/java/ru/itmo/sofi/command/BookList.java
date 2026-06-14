@@ -1,6 +1,7 @@
 package ru.itmo.sofi.command;
 
-import ru.itmo.sofi.essence.booking.Booking;
+import ru.itmo.sofi.exception.StorageLoadException;
+import ru.itmo.sofi.exception.StorageSaveException;
 import ru.itmo.sofi.exception.UserInputException;
 import ru.itmo.sofi.service.BookingService;
 
@@ -17,7 +18,7 @@ public class BookList extends AbstractCommand {
     }
 
     @Override
-    public void execute(String[] args) throws UserInputException {
+    public void execute(String[] args) throws UserInputException, StorageLoadException, StorageSaveException {
         try {
             if (args.length < 2) {
                 throw new UserInputException("Нужно указать id инструмента.");

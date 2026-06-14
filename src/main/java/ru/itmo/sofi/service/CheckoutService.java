@@ -1,10 +1,14 @@
 package ru.itmo.sofi.service;
 
+import ru.itmo.sofi.bstorage.BookingBas;
+import ru.itmo.sofi.bstorage.CheckoutBas;
+import ru.itmo.sofi.essence.booking.Booking;
 import ru.itmo.sofi.essence.checkout.Checkout;
 import ru.itmo.sofi.essence.checkout.ReturnCondition;
 import ru.itmo.sofi.essence.instrument.Instrument;
 import ru.itmo.sofi.essence.instrument.InstrumentStatus;
 import ru.itmo.sofi.essence.instrument.InstrumentType;
+import ru.itmo.sofi.exception.DatabaseException;
 import ru.itmo.sofi.exception.UserInputException;
 
 import java.time.Instant;
@@ -16,69 +20,106 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class CheckoutService {
-    private final Set<Checkout> checkoutCollection = new HashSet<>();
-    private final Map<Long, Checkout> byId = new HashMap<>();
+    //    private static final Set<Checkout> checkoutCollection = new HashSet<>();
+//    private static final Map<Long, Checkout> byId = new HashMap<>();
     private final InstrumentService instrumentService;
     private final BookingService bookingService;
+    private final CheckoutBas checkoutBas = new CheckoutBas();
 
     public CheckoutService(InstrumentService instrumentService, BookingService bookingService) {
         this.instrumentService = instrumentService;
         this.bookingService = bookingService;
     }
 
-    private long getCheckoutNextId() {
-        return System.currentTimeMillis() + checkoutCollection.size();
+    //    private long getCheckoutNextId() {
+//        return System.currentTimeMillis() + checkoutCollection.size();
+//    }
+    private long getCheckoutNextId() throws DatabaseException {
+        return System.currentTimeMillis() + checkoutBas.count();
     }
 
     public Checkout add(long instrumentId, String username, String comment, Instant takenAt, Instant returnedAt, ReturnCondition returnCondition, String ownerUsername, Instant createdAt) throws UserInputException {
-        instrumentService.getById(instrumentId);
-        long id = getCheckoutNextId();
-        Instant now = Instant.now();
-        Checkout checkout = new Checkout(id, instrumentId, username, comment, now, returnedAt, returnCondition, ownerUsername, now);
-        if (byId.containsKey(id)) {
-            throw new UserInputException(checkout.toString() + "уже существует.");
+        try {
+            instrumentService.getById(instrumentId);
+            long id = getCheckoutNextId();
+            Instant now = Instant.now();
+            Checkout checkout = new Checkout(id, instrumentId, username, comment, now, returnedAt, returnCondition, ownerUsername, now);
+//            if (byId.containsKey(id)) {
+//                throw new UserInputException(checkout.toString() + "уже существует.");
+//            }
+//            checkoutCollection.add(checkout);
+//            byId.put(id, checkout);
+            checkoutBas.save(checkout);
+            return checkout;
+        } catch (DatabaseException e) {
+            throw new UserInputException("Ошибка базы данных при создании выдачи.");
         }
-        checkoutCollection.add(checkout);
-        byId.put(id, checkout);
-        return checkout;
     }
 
     public Checkout getById(long id) throws UserInputException {
-        Checkout checkout = byId.get(id);
-        if (checkout == null) {
-            throw new UserInputException("Инструмента с id " + id + " не существует.");
+        try {
+//            Checkout checkout = byId.get(id);
+            Checkout checkout = checkoutBas.findById(id);
+            if (checkout == null) {
+                throw new UserInputException("Выдачи с id " + id + " не существует.");
+            }
+            return checkout;
+        } catch (DatabaseException e) {
+            throw new UserInputException("Ошибка базы данных при поиске выдачи.");
         }
-        return checkout;
     }
 
     public Set<Checkout> getAll() {
-        return new HashSet<>(checkoutCollection);
+//        return new HashSet<>(checkoutCollection);
+        try {
+            return checkoutBas.findAll();
+        } catch (DatabaseException e) {
+            return new HashSet<>();
+        }
     }
 
     public Checkout update(long id, long instrumentId, String username, String comment, Instant takenAt, ReturnCondition returnCondition, String ownerUsername, Instant createdAt) {
         Checkout old = getById(id);
-        checkoutCollection.remove(old);
+//        checkoutCollection.remove(old);
         Instant now = Instant.now();
         Checkout updated = new Checkout(old.getId(), instrumentId, username, comment, takenAt, now, returnCondition, ownerUsername, createdAt);
-        checkoutCollection.add(updated);
-        byId.put(id, updated);
+//        checkoutCollection.add(updated);
+//        byId.put(id, updated);
+        try {
+            checkoutBas.update(updated);
+        } catch (DatabaseException e) {
+            throw new UserInputException("Ошибка базы данных при обновлении выдачи.");
+        }
         return updated;
     }
 
-    public void remove(long id) throws UserInputException{
-        Checkout checkout = byId.remove(id);
-        if (checkout == null) {
-            throw new UserInputException("Инструмента с id " + id + " не существует.");
+    public void remove(long id) throws UserInputException {
+        try {
+            Checkout checkout = checkoutBas.findById(id);
+            if (checkout == null) {
+                throw new UserInputException("Выдача с id " + id + " не существует.");
+            }
+            Instant now = Instant.now();
+            if (checkout.getReturnedAt() == null) {
+                throw new UserInputException("Нельзя удалить выдачу, пока прибор не возвращён.");
+            }
+            checkoutBas.delete(id);
+        } catch (DatabaseException e) {
+            throw new UserInputException("Ошибка базы данных при удалении выдачи.");
         }
-        if (checkout.getReturnedAt() == null) {
-            throw new UserInputException("Нельзя удалить выдачу, пока прибор не возвращён.");
-        }
-        checkoutCollection.remove(checkout);
-        byId.remove(id);
+//        Checkout checkout = byId.get(id);
+//        if (checkout == null) {
+//            throw new UserInputException("Выдача с id " + id + " не существует.");
+//        }
+//        if (checkout.getReturnedAt() == null) {
+//            throw new UserInputException("Нельзя удалить выдачу, пока прибор не возвращён.");
+//        }
+//        checkoutCollection.remove(checkout);
+//        byId.remove(id);
     }
 
     public boolean existsActiveCheckout(long instrumentId) {
-        for (Checkout c : checkoutCollection) {
+        for (Checkout c : getAll()) {
             if (c.getInstrumentId() == instrumentId && c.getReturnedAt() == null) {
                 return true;
             }
@@ -97,16 +138,19 @@ public class CheckoutService {
         }
         String user = username.trim();
         String com = comment.trim();
-        Long id = getCheckoutNextId();
-        Instant now = Instant.now();
-        Checkout checkout = new Checkout(id, instrumentId, user, com, now, null, null, ownerUsername, now);
-        checkoutCollection.add(checkout);
-        byId.put(id, checkout);
-        System.out.println("OK checkout_id=" + id);
+        try {
+            Long id = getCheckoutNextId();
+            Instant now = Instant.now();
+            Checkout checkout = new Checkout(id, instrumentId, user, com, now, null, null, ownerUsername, now);
+            checkoutBas.save(checkout);
+            System.out.println("OK checkout_id=" + id);
+        } catch (DatabaseException e) {
+            throw new UserInputException("Ошибка базы данных при создании выдачи.");
+        }
     }
 
     public void checkoutReturn(long checkoutId, String condStr) throws UserInputException {
-        Checkout checkout = byId.get(checkoutId);
+        Checkout checkout = getById(checkoutId);
         if (checkout == null) {
             System.out.println("Checkout не найден");
             return;
@@ -119,7 +163,7 @@ public class CheckoutService {
         try {
             condition = ReturnCondition.valueOf(condStr);
         } catch (IllegalArgumentException e) {
-            throw new UserInputException ("неверный статус");
+            throw new UserInputException("неверный статус");
         }
         update(checkout.getId(), checkout.getInstrumentId(), checkout.getUsername(), checkout.getComment(), checkout.getTakenAt(), condition, checkout.getOwnerUsername(), checkout.getCreatedAt());
         System.out.println("OK returned");
@@ -127,7 +171,7 @@ public class CheckoutService {
 
     public void checkoutList(boolean openOnly) {
         List<Checkout> list = new ArrayList<>();
-        for (Checkout c : checkoutCollection) {
+        for (Checkout c : getAll()) {
             if (openOnly && c.getReturnCondition() != null) {
                 continue;
             }
@@ -175,7 +219,7 @@ public class CheckoutService {
     }
 
     public void checkoutShow(long checkoutId) throws UserInputException {
-        Checkout c = byId.get(checkoutId);
+        Checkout c = getById(checkoutId);
         if (c == null) {
             throw new UserInputException("Не найден");
         }
@@ -201,12 +245,12 @@ public class CheckoutService {
     }
 
     public void replaceAll(Set<Checkout> newData) {
-        checkoutCollection.clear();
-        byId.clear();
-
-        for (Checkout c : newData) {
-            checkoutCollection.add(c);
-            byId.put(c.getId(), c);
-        }
+//        checkoutCollection.clear();
+//        byId.clear();
+//
+//        for (Checkout c : newData) {
+//            checkoutCollection.add(c);
+//            byId.put(c.getId(), c);
+//        }
     }
 }

@@ -1,5 +1,7 @@
 package ru.itmo.sofi.command;
 
+import ru.itmo.sofi.exception.StorageLoadException;
+import ru.itmo.sofi.exception.StorageSaveException;
 import ru.itmo.sofi.exception.UserInputException;
 import ru.itmo.sofi.service.CheckoutService;
 
@@ -20,7 +22,7 @@ public class CheckoutReturn extends AbstractCommand {
     }
 
     @Override
-    public void execute(String[] args) throws UserInputException {
+    public void execute(String[] args) throws UserInputException, StorageLoadException, StorageSaveException {
         try {
             long checkoutId;
             if (args.length >= 2) {

@@ -1,5 +1,7 @@
 package ru.itmo.sofi.command;
 
+import ru.itmo.sofi.exception.StorageLoadException;
+import ru.itmo.sofi.exception.StorageSaveException;
 import ru.itmo.sofi.exception.UserInputException;
 import ru.itmo.sofi.service.BookingService;
 
@@ -16,7 +18,7 @@ public class BookCancel extends AbstractCommand {
     }
 
     @Override
-    public void execute(String[] args) throws UserInputException {
+    public void execute(String[] args) throws UserInputException, StorageLoadException, StorageSaveException {
         if (args.length != 2) {
             throw new UserInputException("формат book_cancel <booking_id>.");
         }

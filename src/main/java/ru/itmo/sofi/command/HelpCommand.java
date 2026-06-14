@@ -1,5 +1,9 @@
 package ru.itmo.sofi.command;
 
+import ru.itmo.sofi.exception.StorageLoadException;
+import ru.itmo.sofi.exception.StorageSaveException;
+import ru.itmo.sofi.exception.UserInputException;
+
 import java.util.Map;
 
 public class HelpCommand extends AbstractCommand {
@@ -16,7 +20,7 @@ public class HelpCommand extends AbstractCommand {
     }
 
     @Override
-    public void execute(String[] args) {
+    public void execute(String[] args) throws UserInputException, StorageLoadException, StorageSaveException {
         for (String name : commands.keySet().stream().sorted().toList()) {
             System.out.println(commands.get(name).gethelp());
         }

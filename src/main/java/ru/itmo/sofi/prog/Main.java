@@ -7,14 +7,12 @@ import ru.itmo.sofi.command.*;
 import ru.itmo.sofi.essence.booking.*;
 import ru.itmo.sofi.essence.checkout.Checkout;
 import ru.itmo.sofi.essence.instrument.*;
-import ru.itmo.sofi.exception.StorageException;
+import ru.itmo.sofi.exception.StorageLoadException;
+import ru.itmo.sofi.exception.StorageSaveException;
 import ru.itmo.sofi.exception.UserInputException;
 import ru.itmo.sofi.service.*;
 
-import java.nio.file.Path;
-import java.time.Instant;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -76,7 +74,7 @@ public class Main {
         commandHashMap.put(CheckoutShow.getName(), new CheckoutShow(checkoutService));
         commandHashMap.put(BookReschedule.getName(), new BookReschedule(bookingService, scanner));
         commandHashMap.put(Save.getName(), new Save(instrumentService, bookingService, checkoutService, instrumentStorage, bookingStorage, checkoutStorage));
-        commandHashMap.put(Load.getName(), new Load( instrumentService, bookingService, checkoutService, instrumentStorage, bookingStorage, checkoutStorage));
+        commandHashMap.put(Load.getName(), new Load(instrumentService, bookingService, checkoutService, instrumentStorage, bookingStorage, checkoutStorage));
         instrumentService.add(
                 "pH метр",
                 InstrumentType.PH_METER,
@@ -93,29 +91,23 @@ public class Main {
             try {
                 System.out.print("> ");
                 String line = scanner.nextLine().trim();
-
                 if (line.isEmpty()) {
                     continue;
                 }
-
                 String[] parts = line.split("\\s+");
                 String commandName = parts[0];
-
                 AbstractCommand command = commandHashMap.get(commandName);
-
                 if (command == null) {
                     System.out.println("Такой команды не существует. Попробуйте другую.");
                     continue;
                 }
-
                 if (command.isExit()) {
                     isRunning = false;
                     System.out.println("Программа завершена.");
                     continue;
                 }
-
                 command.execute(parts);
-            } catch (UserInputException | StorageException e) {
+            } catch (UserInputException | StorageLoadException | StorageSaveException e) {
                 System.out.println(e.getMessage());
             }
         }

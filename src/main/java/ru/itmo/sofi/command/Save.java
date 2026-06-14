@@ -4,7 +4,8 @@ import ru.itmo.sofi.base.CollectionStorage;
 import ru.itmo.sofi.essence.booking.Booking;
 import ru.itmo.sofi.essence.checkout.Checkout;
 import ru.itmo.sofi.essence.instrument.Instrument;
-import ru.itmo.sofi.exception.StorageException;
+import ru.itmo.sofi.exception.StorageLoadException;
+import ru.itmo.sofi.exception.StorageSaveException;
 import ru.itmo.sofi.exception.UserInputException;
 import ru.itmo.sofi.service.BookingService;
 import ru.itmo.sofi.service.CheckoutService;
@@ -32,7 +33,7 @@ public class Save extends AbstractCommand {
     }
 
     @Override
-    public void execute(String[] args) throws StorageException {
+    public void execute(String[] args) throws UserInputException, StorageLoadException, StorageSaveException {
         try {
             if (args.length < 2) {
                 System.out.println("Укажите путь. Пример: save data");
@@ -55,7 +56,7 @@ public class Save extends AbstractCommand {
             checkoutStorage.save(checkouts, checkoutPath);
             System.out.println("Данные сохранены в " + basePath.toAbsolutePath());
         } catch (Exception e) {
-            throw new StorageException ("Ошибка сохранения: " + e.getMessage());
+            throw new StorageSaveException("Проверьте корректность пути и доступность файлов.");
         }
     }
 

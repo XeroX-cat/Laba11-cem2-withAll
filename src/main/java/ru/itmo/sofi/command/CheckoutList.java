@@ -1,5 +1,7 @@
 package ru.itmo.sofi.command;
 
+import ru.itmo.sofi.exception.StorageLoadException;
+import ru.itmo.sofi.exception.StorageSaveException;
 import ru.itmo.sofi.exception.UserInputException;
 import ru.itmo.sofi.service.CheckoutService;
 
@@ -16,7 +18,7 @@ public class CheckoutList extends AbstractCommand {
     }
 
     @Override
-    public void execute(String[] args) throws UserInputException {
+    public void execute(String[] args) throws UserInputException, StorageLoadException, StorageSaveException {
         boolean openOnly = args.length == 2 && "--open-only".equals(args[1]);
 
         if (args.length != 1 && !openOnly) {

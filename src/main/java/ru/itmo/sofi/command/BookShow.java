@@ -1,5 +1,7 @@
 package ru.itmo.sofi.command;
 
+import ru.itmo.sofi.exception.StorageLoadException;
+import ru.itmo.sofi.exception.StorageSaveException;
 import ru.itmo.sofi.exception.UserInputException;
 import ru.itmo.sofi.service.BookingService;
 
@@ -17,7 +19,7 @@ public class BookShow extends AbstractCommand {
     }
 
     @Override
-    public void execute(String[] args) throws UserInputException {
+    public void execute(String[] args) throws UserInputException, StorageLoadException, StorageSaveException {
         try {
             if (args.length != 2) {
                 throw new UserInputException("Формат book_show <booking_id>.");

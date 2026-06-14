@@ -1,6 +1,9 @@
 package ru.itmo.sofi.command;
 
 import ru.itmo.sofi.essence.instrument.InstrumentType;
+import ru.itmo.sofi.exception.StorageLoadException;
+import ru.itmo.sofi.exception.StorageSaveException;
+import ru.itmo.sofi.exception.UserInputException;
 import ru.itmo.sofi.service.CheckoutService;
 
 import java.util.Scanner;
@@ -20,7 +23,7 @@ public class InstAvailable extends AbstractCommand {
     }
 
     @Override
-    public void execute(String[] args) {
+    public void execute(String[] args) throws UserInputException, StorageLoadException, StorageSaveException {
         String type;
         String start;
         String end;
